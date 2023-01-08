@@ -2,6 +2,8 @@ import sys
 import pygame
 import random
 
+BGFile = 'Assets/BG.png'
+BGIMG = pygame.image.load(BGFile)
 
 def Quit():
     pygame.quit()
@@ -33,6 +35,7 @@ class GameManager:
         self.GhostPieces = []    # Each piece object gets added to an array as a Ghost, so it can draw all on screen
         self.PAUSE = False
         self.oldLevel = 0
+        self.fastMove = False
         # TODO: Make up next Queue
         #self.upnextArr = self.GETUPNEXT
         self.activePiece = Piece(5)
@@ -69,11 +72,15 @@ class GameManager:
     def Update(self):
         # these are bad for my IDE intellisense but oh well :(
         self.screen.fill((0, 0, 0))
+        self.DrawAssets()
         for item in self.GhostPieces:
             item.Draw(self.resolution,self.screen)
         self.DrawBoard()
         self.activePiece.UpdatePiece(self.screen,self.resolution,self.board)
         self.Gravity()
+
+    def DrawAssets(self):
+        self.screen.blit(BGIMG,(0,0))
 
     # Executes downward movement every tick
     def Gravity(self):
@@ -262,6 +269,8 @@ class GameManager:
                 self.activePiece.Move(self.board,Left=True)
             if pygame.key.get_pressed()[pygame.K_d]:#Right
                 self.activePiece.Move(self.board,Left=False)
+            if pygame.key.get_pressed()[pygame.K_SPACE]:
+                self.activePiece.SetDown(self.board)
 
 
 
