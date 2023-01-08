@@ -7,6 +7,7 @@ This is my tetris Game engine that I have been working really hard on and have b
 
 - A/D - Move piece left or right
 - Left/Right Key - Rotate in that direction.
+- Space - Fast Place (sends piece to the bottom)
 
 No scoring yet as this is V1.0, but these are the features I'm planning to add and are also visible in the source code:
 
