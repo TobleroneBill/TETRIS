@@ -1,9 +1,14 @@
 import sys
 import pygame
 import random
+import glob
 
-BGFile = 'Assets/BG.png'
-BGIMG = pygame.image.load(BGFile)
+# The Assets in BG
+assetDir = glob.glob('Assets/*.png')
+BGIMG = pygame.image.load(assetDir[0])
+
+pygame.font.init()
+ScoreFont = pygame.font.SysFont('Arial',20)
 
 def Quit():
     pygame.quit()
@@ -28,8 +33,8 @@ class GameManager:
         self.boardColor = ((43, 43, 43))
         self.resolution = resolution
         self.screen = screen  # Pygame window
-        self.level = 16
-        self.line_clears = 0    # Indiviual lines, not 4 stacks. keeps track of lines needed to up the level (10)
+        self.level = 6
+        self.line_clears = 9   # Indiviual lines, not 4 stacks. keeps track of lines needed to up the level (10)
         self.total_line_clears = 0  # to keep track of total Lines
         self.timer = 120        # Depletes faster as Level increases
         self.GhostPieces = []    # Each piece object gets added to an array as a Ghost, so it can draw all on screen
@@ -39,6 +44,7 @@ class GameManager:
         # TODO: Make up next Queue
         #self.upnextArr = self.GETUPNEXT
         self.activePiece = Piece(5)
+        self.AssetList = []
 
     # Each coordinate holds a 1 or 0
     # If the line == 10, then it is a full line (see checklines method)
@@ -61,6 +67,25 @@ class GameManager:
             return arr,testArr
         return arr
 
+    # shows Score, Level and maybe a quit button if i figure that out (not important now)
+    def DrawText(self):
+        TextColor = (255,255,255)
+        if self.PAUSE:
+            levelText = f'Level: {self.oldLevel}'
+        else:
+            levelText = f'Level: {self.level}'
+        # Score
+        level = ScoreFont.render(levelText,False,TextColor)
+        levelRect = level.get_rect(y=0)
+        levelRect.x = self.screen.get_width() - levelRect.width
+
+        lineClears = ScoreFont.render(f'Lines Cleared: {self.total_line_clears}',False,TextColor)
+        LCRect = lineClears.get_rect(y=0)
+        LCRect.x = levelRect.x - LCRect.width - 20
+
+        self.screen.blit(level,levelRect)
+        self.screen.blit(lineClears,LCRect)
+
     # Makes the grid in pygame
     def DrawBoard(self):
         for item in self.board:
@@ -71,21 +96,21 @@ class GameManager:
     # Draws the board, and pieces
     def Update(self):
         # these are bad for my IDE intellisense but oh well :(
-        self.screen.fill((0, 0, 0))
         self.DrawAssets()
-        for item in self.GhostPieces:
-            item.Draw(self.resolution,self.screen)
         self.DrawBoard()
         self.activePiece.UpdatePiece(self.screen,self.resolution,self.board)
         self.Gravity()
 
     def DrawAssets(self):
         self.screen.blit(BGIMG,(0,0))
+        self.DrawText()
+        for item in self.GhostPieces:
+            item.Draw(self.resolution,self.screen)
 
     # Executes downward movement every tick
     def Gravity(self):
         self.timer -= self.level
-        if self.timer <0:
+        if self.timer < 0:
             self.timer = 120
             # Gets all the pieces in actual boardSpace
             ActivePos = self.activePiece.GetBoardState(self.activePiece.type,self.activePiece.pos)
@@ -97,9 +122,7 @@ class GameManager:
                     break
                 # If coordinate Under Tetris Piece is in Board, then place it (so it places ontop)
                 underPos = (item[0],item[1]+1,1)
-                #print(f'underPos = {underPos}\n pos = {item}')
                 if underPos in self.board:
-                    print('Collision?')
                     CanMove = False
 
 
@@ -172,18 +195,16 @@ class GameManager:
         self.PAUSEGAME()
 
     def LineCount(self,lines):
+        lineLimit = 1
         self.line_clears += lines    # Add line clears to
         self.total_line_clears += lines
-        if self.line_clears > 10:
-            self.level += 1
+        if self.line_clears >= lineLimit:
+            self.oldLevel += 1
             self.line_clears = 0
-            print(f'Current Level: {self.oldLevel}\tTotal Lines: {self.total_line_clears}')
-        if self.PAUSE:
-            titleText = f'Current Level: {self.oldLevel}\tTotal Lines: {self.total_line_clears}'
-            pygame.display.set_caption(titleText)
-        else:
-            titleText = f'Current Level: {self.level}\tTotal Lines: {self.total_line_clears}'
-            pygame.display.set_caption(titleText)
+            print(self.level)
+            print(self.oldLevel)
+            print('this has happened')
+
 
 
 
@@ -194,7 +215,7 @@ class GameManager:
         newBoard = NewBoardList         # The new board, to replace the old one after updating
         TetrisSize = len(RemoveCoords)
 
-        #self.LineCount(TetrisSize) #update the linecount for the player to see
+        self.LineCount(TetrisSize) #update the linecount for the player to see
 
         # because number of lines is variable, this has to become a hard nested loop. I could have put all the coords
         # into a single List using a loop in an earlier method, but it seems just as awkward as this method.
@@ -271,6 +292,7 @@ class GameManager:
                 self.activePiece.Move(self.board,Left=False)
             if pygame.key.get_pressed()[pygame.K_SPACE]:
                 self.activePiece.SetDown(self.board)
+                self.timer = 0
 
 
 
@@ -341,10 +363,7 @@ class Piece:
             if self.SideCollisions(newBoard):
                 return
 
-            if self.BoardCollisions(newBoard,board):
-                print('collides')
-            else:
-                print('doesnt Collide')
+            if not self.BoardCollisions(newBoard,board):
                 self.pos = newPos
         else:
             newPos = (self.pos[0] + 1,self.pos[1])
@@ -354,10 +373,7 @@ class Piece:
             if self.SideCollisions(newBoard):
                 return
 
-            if self.BoardCollisions(newBoard,board):
-                print('collides')
-            else:
-                print('doesnt Collide')
+            if not self.BoardCollisions(newBoard,board):
                 self.pos = newPos
 
     # Takes a position array (x,y) and a turns it into positions on the board (x,y,1)
@@ -383,9 +399,7 @@ class Piece:
     def BoardCollisions(self,upPos,board):
         # If the updated position is in the board already, then it is true
         for i in upPos:
-            print(i)
             if i in board:
-                print(f'{i} is active on board')
                 return True
         return False
 
@@ -432,10 +446,8 @@ class Piece:
         else:
             for coord in self.type:
                 coordArr.append((self.RightRotate(coord)))
-        print(coordArr)
         # gets the board positions of the rotated coordinates
         rotatedArr = self.GetBoardState(coordArr,self.pos)
-        print(rotatedArr)
         # Will return if True
         if self.SideCollisions(rotatedArr) or self.BoardCollisions(rotatedArr,Board):
             # Reset Direction due to Collision
@@ -445,8 +457,6 @@ class Piece:
                 self.direction += 1
             return
         self.type = coordArr
-        print(self.type)
-        print(self.direction)
 
     def RightRotate(self,coord):
         x = -coord[1]
@@ -458,6 +468,38 @@ class Piece:
         y = -coord[0]
         return ((x, y))
 
+    # get the location of the lowest active piece
+    # then check the positions around where your Piece would land
+    # if no collisions, move to that position
+    # EDIT: Apparently there is no need to check for collisions?
+    def SetDown(self,board):
+        newPosArr = []
+        Diff = 24
+        for y in range(self.pos[1],24): # range of your position to the bottom
+            for pos in self.boardState: # each tetromino position
+                if (pos[0],y,1) in board:
+                    newPosArr.append(y)   # at 1st match save position and quit
+                    break
+
+        # get the highest active piece
+        if len(newPosArr) > 0:
+            Diff = min(newPosArr)
+            print(f'difference = {Diff}/pos= {self.pos}')
+
+        # This works, because a tile can only take up 3 spaces  (unless line) hmmmm
+        print(Diff-2)
+        # sets position to be 2 above the difference value
+        # Don't think this is a bug free solution, but will have to do for now :/
+        # Basically this doesnt take into account direction, so it puts any piece at the same height
+        # This is why it sometimes lags behind a bit when placing
+        if self.pieceType == 1: # this is the only one that can be taller than the others
+            if self.direction % 2 != 0:
+                self.pos = (self.pos[0], Diff-3)
+            else:
+                self.pos = (self.pos[0], Diff - 2)
+        else:
+            self.pos = (self.pos[0], Diff-2)
+        return True
 
 # Gets Places At the Location of a placed tetromino in the board (to be continuously Drawn
 class Ghost:
@@ -476,15 +518,4 @@ class Ghost:
         posIndex = self.positions.index(GivePosition)
         del self.positions[posIndex]
         if len(self.positions) == 0:
-            print('deletin')
             del self
-
-    # Needs finishing
-    # Clear positions in self array, from the given positions from actual board.
-    def ClearLines(self,positions):
-        for item in positions:
-            if item in self.positions:
-                pass
-
-
-
