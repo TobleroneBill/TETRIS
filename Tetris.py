@@ -20,10 +20,11 @@ class GameManager:
         self.boardColor = ((43, 43, 43))
         self.resolution = resolution
         self.screen = screen  # Pygame window
-        self.level = 12
-        self.line_clears = 0    # Indiviual lines, not 4 stacks
+        self.level = 16
+        self.line_clears = 0    # Indiviual lines, not 4 stacks. keeps track of lines needed to up the level (10)
+        self.total_line_clears = 0  # to keep track of total Lines
         self.timer = 120        # Depletes faster as Level increases
-        self.pieceArray = []    # Each piece object gets added to an array as a Ghost, so it can draw all on screen
+        self.GhostPieces = []    # Each piece object gets added to an array as a Ghost, so it can draw all on screen
         self.PAUSE = False
         self.oldLevel = 0
         # TODO: Make up next Queue
@@ -62,7 +63,7 @@ class GameManager:
     def Update(self):
         # these are bad for my IDE intellisense but oh well :(
         self.screen.fill((0, 0, 0))
-        for item in self.pieceArray:
+        for item in self.GhostPieces:
             item.Draw(self.resolution,self.screen)
         self.DrawBoard()
         self.activePiece.UpdatePiece(self.screen,self.resolution,self.board)
@@ -72,7 +73,6 @@ class GameManager:
     def Gravity(self):
         self.timer -= self.level
         if self.timer <0:
-            self.CheckLines()
             self.timer = 120
             # Gets all the pieces in actual boardSpace
             ActivePos = self.activePiece.GetBoardState(self.activePiece.type,self.activePiece.pos)
@@ -106,7 +106,9 @@ class GameManager:
             #Gets locations and turns them on
             newPosIndex = self.board.index((item[0],item[1],0))
             self.board[newPosIndex] = item
-        self.pieceArray.append(Ghost(self.activePiece.Color,positions))
+        self.GhostPieces.append(Ghost(self.activePiece.Color,positions))
+
+        self.CheckLines()
 
         #Creates new piece Randomly
         self.activePiece = Piece(random.randint(1,7))
@@ -116,18 +118,120 @@ class GameManager:
     # Every block placement, check for lines
     def CheckLines(self):
         lineNums = []
+        useful_positions = []
         # To be changed and then sent back as the final board
         for y in range(24):
             # Loops through y, instead of x
             laneTotal = 0
+            positions = []
             for x in range(10):
                 if (x,y,1) in self.board:
                     laneTotal +=1
+                    positions.append((x,y,1))
             if laneTotal == 10: #if lane is full, Give to array of full lines (to test if its a tetris)
                 lineNums.append(y)
+                useful_positions.append(positions)
 
         if len(lineNums) > 0:
-            self.RemoveLines(lineNums)
+            self.RemoveLines(lineNums,useful_positions)
+
+    # Current order of events:
+    #   $$ = Possible Refactoring
+    # if the total number of live blocks at each y value is equal to 10, then that Y value is a full line
+    # The Y locations are stored into an array, which is then passed to the remove lines method.
+    #
+    # The game is paused in order to remove lines, and then saves a copy of each ghost piece, and makes a new board
+    # to be written to, once the ghost piece positions are calculated
+    # the Y position array is also saved, its used to get all positions in the board that they are located $$
+    # this is not done using the method get active Pieces anymore
+
+    # Actually Removes the lines if there is a match
+    def RemoveLines(self, laneNumArr,activePieceArr):
+        # Pauses Game
+        self.PAUSEGAME()
+        newBoard = self.MakeBoard()  # make a new board
+        # Coords within the Line Clear
+        removeCoords = activePieceArr
+        lowestY = max(laneNumArr)   # Highest value because it starts from top down
+
+        # Apply changes to the Ghost Pieces
+        newBoard = self.RemoveGhosts(removeCoords, newBoard,lowestY)
+
+        self.board = newBoard
+        self.PAUSEGAME()
+
+    def LineCount(self,lines):
+        self.line_clears += lines    # Add line clears to
+        self.total_line_clears += lines
+        if self.line_clears > 10:
+            self.level += 1
+            self.line_clears = 0
+            print(f'Current Level: {self.oldLevel}\tTotal Lines: {self.total_line_clears}')
+        if self.PAUSE:
+            titleText = f'Current Level: {self.oldLevel}\tTotal Lines: {self.total_line_clears}'
+            pygame.display.set_caption(titleText)
+        else:
+            titleText = f'Current Level: {self.level}\tTotal Lines: {self.total_line_clears}'
+            pygame.display.set_caption(titleText)
+
+
+
+    def RemoveGhosts(self,removeCoordArr,NewBoardList,lowestY):
+        # Ghost Piece positions
+        newGhosts = self.GhostPieces
+        RemoveCoords = removeCoordArr  # The list of active positions to be cleared
+        newBoard = NewBoardList         # The new board, to replace the old one after updating
+        TetrisSize = len(RemoveCoords)
+
+        #self.LineCount(TetrisSize) #update the linecount for the player to see
+
+        # because number of lines is variable, this has to become a hard nested loop. I could have put all the coords
+        # into a single List using a loop in an earlier method, but it seems just as awkward as this method.
+        # maybe good for clarity, but think this looks cool despite how much nesting there is
+
+        for coordArr in RemoveCoords:               # every line of coordinates
+            for coord in coordArr:                  # every coordinate in the line
+                for ghost in newGhosts:             # every ghost in list
+                    posArr = []                     # array to store all positions that are in line clear
+                    for ghostPos in ghost.positions:  # get each of the 4 positions
+                        if ghostPos in coordArr:  # If its already in the active position list (to be deleted basically)
+                            posArr.append(tuple(ghostPos))
+                    for position in posArr:         # Removes all positions at once (Just in case)
+                        ghost.DelPos(position)
+
+        # needs the coord above the highest Y value, so it only moves those coords down
+        self.GhostDown(newGhosts,TetrisSize, lowestY)    # These ghosts have the final Actual positions
+        newBoard = self.MoveDown(newBoard,newGhosts)
+
+        #Return with results
+        return newBoard
+
+    # moves each ghost position down by the size of the tetris
+    def GhostDown(self,ghostList,TetrisSize,lowY):
+        # The positions in the line clear are already deleted by this point
+        GL = ghostList
+        for ghost in GL:
+            for position in ghost.positions:
+                if position[1] < lowY:  # if it y pos is above the clear lines
+                    posIndex = ghost.positions.index(position)
+                    ghost.positions[posIndex] = (position[0],position[1] + TetrisSize,1)
+        return GL
+
+
+    def MoveDown(self,board,ghosts):
+        finalBoard = board
+        GhostPos = []  # List of ghost Positions
+        for ghost in ghosts:
+            for position in ghost.positions:
+                GhostPos.append(position)
+
+        for position in GhostPos:# turn all ghost positions into taken board spaces
+            if (position[0],position[1],0) in finalBoard:
+                posindex = finalBoard.index((position[0],position[1],0))  # get the index of the position thats going to be deleted
+                finalBoard[posindex] = position   # activate the position that was previously inactive
+
+        return finalBoard
+
 
     # in the words of stamper, PAUSE
     def PAUSEGAME(self):
@@ -139,112 +243,6 @@ class GameManager:
             self.level = self.oldLevel
 
 
-    #TODO: FINISHE LINE REMOVAL
-
-    # so far i have this: all positions above the lowest y (0,0 starts from top left)
-    # to be pulled down by the size of the array (max 4)
-    # Once you do that, you need to give each ghost piece all positions that were wiped.
-    # Using that info they will remove segments, or delete them
-    # Then they will move thier positions down by lenght of array
-
-    def getActivePieces(self,laneNum):
-        arr = []
-        for y in laneNum:
-            for x in range(10):
-                # just move the coords above Down one
-                arr.append((x,y,1))
-        return arr
-
-    def RemoveGhosts(self,ghostList,activePieceList,NewBoardList,laneSize):
-        # Ghost Piece positions
-        newGhosts = ghostList       #The updated ghosts
-        activePieces = activePieceList  # The list of active positions to be cleared
-        newBoard = NewBoardList         # The new board, to replace the old one after updating
-        TetrisSize = laneSize
-        laneY = activePieces[0][1]
-        print(f'yPos = {laneY}')
-
-        for ghost in newGhosts:  # for every ghost in list
-            posArr = []  # array to store all positions that are in line clear
-            for ghostPos in ghost.positions:  # get each of the 4 positions
-                # This should always be able to happen
-                if ghostPos in activePieces:  # If its already in the active position list (to be deleted basically)
-                    posArr.append(tuple(ghostPos))
-
-
-            # once it has the correct positions, remove all the pieces at once, so it doesnt give wierd results
-            for position in posArr:
-                ghost.DelPos(position)  # delete the block at the position
-
-        newGhosts = self.GhostDown(ghostList,TetrisSize)    # These ghosts have the final Actual positions
-        newBoard = self.MoveDown(newBoard,ghostList)
-
-        #Return with results
-        return newGhosts,activePieces,newBoard
-
-    def GhostDown(self,GhostPieces,TetrisSize):
-        ghosts = GhostPieces
-        MoveSize = TetrisSize
-
-        for ghost in ghosts:
-            for position in ghost.positions:
-                if position[1] == 23:   #if at range Limit, dont calculate whats below because it will crash
-                    continue
-                posIndex = ghost.positions.index(position)
-                ghost.positions[posIndex] = (position[0],position[1] + MoveSize,1)
-        return ghosts
-
-
-    def MoveDown(self,board,ghosts):
-        finalBoard = board
-        positions = []  # List of ghost Positions
-        # Get the positions each ghost POST UPDATE  (i know this is heavily segmented, but once i get something working
-        # Then you can refactor and make it gucci ;)
-        for ghost in ghosts:
-            for position in ghost.positions:
-                positions.append(position)
-
-        #getY = lambda y: y[1]
-        # sory by Y value
-        #positions.sort(key=getY)
-#        print(positions)
-
-        # make a new board lol
-#        newBoard = self.MakeBoard()
-#        print(newBoard)
-        for position in positions:# turn all ghost positions into taken board spaces
-            if (position[0],position[1],0) in finalBoard:
-                posindex = finalBoard.index((position[0],position[1],0))  # get the index of the position thats going to be deleted
-                finalBoard[posindex] = position   # activate the position that was previously inactive
-
-        return finalBoard
-
-
-    # Actually Removes the lines if there is a match
-    def RemoveLines(self,laneNumArr):
-        # Pauses Game
-        self.PAUSEGAME()
-        newGhosts = self.pieceArray
-        newBoard = self.MakeBoard() #make a new board lol cuz we straight up resetting this biznatch
-        # active Pieces are the positions of the lines being removed
-        activePieces = self.getActivePieces(laneNumArr)
-
-        # get the higest Y (lowest because 0,0 is top left)
-        lowestY = activePieces[0][1]
-        for item in activePieces:
-            if item[1] < lowestY:
-                lowestY = item[1]
-
-        # Apply changes to the Ghost Pieces
-        self.RemoveGhosts(newGhosts,activePieces,newBoard,len(laneNumArr))
-        print(f'No of ghosts: {len(newGhosts)}\n'
-              f'deleted Line Coords: {activePieces}\n'
-              f'Old BoardState: {self.board}\n'
-              f'New BoardState: {newBoard}')
-
-        self.board = newBoard
-        self.pieceArray = newGhosts
-        self.PAUSEGAME()
 
     # Get left(a) and right(d) input and Rotation(left/right) Input
     # Gets input from pygame events in main loop
