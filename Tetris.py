@@ -29,7 +29,7 @@ class GameManager:
         self.oldLevel = 0
         # TODO: Make up next Queue
         #self.upnextArr = self.GETUPNEXT
-        self.activePiece = Piece(1)
+        self.activePiece = Piece(3)
 
     # Each coordinate holds a 1 or 0
     # If the line == 10, then it is a full line (see checklines method)
@@ -140,10 +140,10 @@ class GameManager:
     # if the total number of live blocks at each y value is equal to 10, then that Y value is a full line
     # The Y locations are stored into an array, which is then passed to the remove lines method.
     #
-    # The game is paused in order to remove lines, and then saves a copy of each ghost piece, and makes a new board
-    # to be written to, once the ghost piece positions are calculated
-    # the Y position array is also saved, its used to get all positions in the board that they are located $$
-    # this is not done using the method get active Pieces anymore
+    # Remove lines make a new board, to put ghost updated ghost positions in, and gets the highest Y value of the
+    # passed y values
+    #
+    # The new board to be updated is a
 
     # Actually Removes the lines if there is a match
     def RemoveLines(self, laneNumArr,activePieceArr):
@@ -152,7 +152,7 @@ class GameManager:
         newBoard = self.MakeBoard()  # make a new board
         # Coords within the Line Clear
         removeCoords = activePieceArr
-        lowestY = max(laneNumArr)   # Highest value because it starts from top down
+        lowestY = max(laneNumArr)   # Highest value because it starts from top down (laneNumArr only contains Y Values)
 
         # Apply changes to the Ghost Pieces
         newBoard = self.RemoveGhosts(removeCoords, newBoard,lowestY)
@@ -212,10 +212,10 @@ class GameManager:
         GL = ghostList
         for ghost in GL:
             for position in ghost.positions:
-                if position[1] < lowY:  # if it y pos is above the clear lines
+                if position[1] <= lowY:  # if it y pos is above or (on the clear lines some how)
                     posIndex = ghost.positions.index(position)
                     ghost.positions[posIndex] = (position[0],position[1] + TetrisSize,1)
-        return GL
+        self.GhostPieces = GL
 
 
     def MoveDown(self,board,ghosts):
