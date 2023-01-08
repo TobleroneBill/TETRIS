@@ -1,5 +1,11 @@
+import sys
 import pygame
 import random
+
+
+def Quit():
+    pygame.quit()
+    sys.exit()
 
 # features:
 #   Clears the board
@@ -29,7 +35,7 @@ class GameManager:
         self.oldLevel = 0
         # TODO: Make up next Queue
         #self.upnextArr = self.GETUPNEXT
-        self.activePiece = Piece(3)
+        self.activePiece = Piece(5)
 
     # Each coordinate holds a 1 or 0
     # If the line == 10, then it is a full line (see checklines method)
@@ -103,17 +109,15 @@ class GameManager:
     def Place(self,positions):
         BoardPositions = positions
         for item in BoardPositions:
+            if item[1] < 0:  # Endgame
+                Quit()
             #Gets locations and turns them on
             newPosIndex = self.board.index((item[0],item[1],0))
             self.board[newPosIndex] = item
         self.GhostPieces.append(Ghost(self.activePiece.Color,positions))
-
         self.CheckLines()
-
         #Creates new piece Randomly
         self.activePiece = Piece(random.randint(1,7))
-        #self.activePiece = Piece(1)
-
 
     # Every block placement, check for lines
     def CheckLines(self):
@@ -143,7 +147,7 @@ class GameManager:
     # Remove lines make a new board, to put ghost updated ghost positions in, and gets the highest Y value of the
     # passed y values
     #
-    # The new board to be updated is a
+    #
 
     # Actually Removes the lines if there is a match
     def RemoveLines(self, laneNumArr,activePieceArr):
@@ -435,52 +439,15 @@ class Piece:
         print(self.type)
         print(self.direction)
 
-    def LeftRotate(self,coord):
-        # 1 to 2
-        if self.direction == 1:
-            x = -coord[1]
-            y = coord[0]
-            return ((x, y))
-            # 2 to 3
-        if self.direction == 2:
-            x = -coord[1]
-            y = coord[0]
-            return ((x, y))
-            # 3 to 4
-        if self.direction == 3:
-            x = -coord[1]
-            y = coord[0]
-            return ((x, y))
-            # 4 to 1
-        if self.direction == 4:
-            x = -coord[1]
-            y = coord[0]
-            return ((x, y))
-        return coord
+    def RightRotate(self,coord):
+        x = -coord[1]
+        y = coord[0]
+        return ((x, y))
 
-    def RightRotate(self, coord):
-        print(coord)
-        # 1 to 4
-        if self.direction == 1:
-            x = coord[1]
-            y = -coord[0]
-            return ((x, y))
-            # 4 to 3
-        if self.direction == 2:
-            x = coord[1]
-            y = -coord[0]
-            return ((x, y))
-            # 3 to 2
-        if self.direction == 3:
-            x = coord[1]
-            y = -coord[0]
-            return ((x, y))
-            # 2 to 1
-        if self.direction == 4:
-            x = coord[1]
-            y = -coord[0]
-            return ((x, y))
-        return coord
+    def LeftRotate(self, coord):
+        x = coord[1]
+        y = -coord[0]
+        return ((x, y))
 
 
 # Gets Places At the Location of a placed tetromino in the board (to be continuously Drawn
