@@ -6,7 +6,7 @@ This is my tetris Game engine that I have been working really hard on and have b
 ### Controls
 
 - A/D - Move piece left or right
-- Left/Right Key - Rotate in that direction. When playing this might feel a little weird, but I think this is because in normal tetris, you can only rotate in a single direction (that or my rotation matrix thing isn't working properly (but i think it is))
+- Left/Right Key - Rotate in that direction.
 
 No scoring yet as this is V1.0, but these are the features I'm planning to add and are also visible in the source code:
 
