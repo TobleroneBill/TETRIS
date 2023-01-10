@@ -43,7 +43,7 @@ class GameManager:
         self.fastMove = False
         # TODO: Make up next Queue
         #self.upnextArr = self.GETUPNEXT
-        self.activePiece = Piece(5)
+        self.activePiece = Piece(4)
         self.AssetList = []
 
     # Each coordinate holds a 1 or 0
@@ -148,7 +148,7 @@ class GameManager:
         self.CheckLines()
         #Creates new piece Randomly
         self.activePiece = Piece(random.randint(1,7))
-
+        #self.activePiece = Piece(4)
     # Every block placement, check for lines
     def CheckLines(self):
         lineNums = []
@@ -291,8 +291,9 @@ class GameManager:
             if pygame.key.get_pressed()[pygame.K_d]:#Right
                 self.activePiece.Move(self.board,Left=False)
             if pygame.key.get_pressed()[pygame.K_SPACE]:
+                # sets it to lowers possible position and then instantly places it
                 self.activePiece.SetDown(self.board)
-                self.timer = 0
+                self.Place(self.activePiece.GetBoardState(self.activePiece.type,self.activePiece.pos))
 
 
 
@@ -329,19 +330,24 @@ class Piece:
         # Each tuple represents a shape
         if typenum == 1:
             # I coords
-            return ((0, 1), (0, 0), (0, -1), (0, -2))
+            return ((1, 1), (1, 0), (1, -1), (1, -2))
         if typenum == 2:
             # T coords
             return ((-1, 0), (0, 0), (1, 0), (0, -1))
         if typenum == 3:    # Square
             return ((0,0),(0,1),(1,0),(1,1))
+
+
         if typenum == 4:    #L piece
-            return ((0,-1),(0,0),(0,1),(1,1))
+            return ((-1,1),(-1,0),(0,0),(1,0))
+
         if typenum == 5:    #J piece
-            return ((0,-1),(0,0),(0,1),(-1,1))
+            return ((1,1),(-1,0),(0,0),(1,0))
+
+
         if typenum == 6:    #s piece
             return ((-1,0),(0,0),(0,1),(1,1))
-        if typenum == 7:    #J piece
+        if typenum == 7:    #z piece
             return ((1,0),(0,0),(0,1),(-1,1))
         if typenum == 8:
             return ((0,0))
@@ -457,6 +463,7 @@ class Piece:
                 self.direction += 1
             return
         self.type = coordArr
+        print(self.type[0])
 
     def RightRotate(self,coord):
         x = -coord[1]
@@ -468,37 +475,85 @@ class Piece:
         y = -coord[0]
         return ((x, y))
 
+    # get lowest Y position
+    def lowestY(self, ypos):
+        # defaults to the y position if no y given
+        lowY = ypos
+        for coord in self.boardState:
+            if coord[1] < lowY:
+                lowY = ypos
+        print(f'{lowY} is lowest Y pos')
+        return lowY
+
     # get the location of the lowest active piece
     # then check the positions around where your Piece would land
     # if no collisions, move to that position
-    # EDIT: Apparently there is no need to check for collisions?
+    # todo: method for seeing lowest possible Y position
     def SetDown(self,board):
+        print()
+        print('setdown start')
         newPosArr = []
-        Diff = 24
-        for y in range(self.pos[1],24): # range of your position to the bottom
-            for pos in self.boardState: # each tetromino position
+        hiPoint = 24   # board height
+
+        for y in range(self.pos[1],hiPoint):     # range of piece Y to the bottom Y
+            for pos in self.boardState:     # each tetromino PIECE position
+                # where the piece meets the highest placed tetromino (always 1st collision)
                 if (pos[0],y,1) in board:
-                    newPosArr.append(y)   # at 1st match save position and quit
+                    newPosArr.append(y)     # at 1st match save position and quit
                     break
+
+        print(f'list of hi points: {newPosArr}')
 
         # get the highest active piece
         if len(newPosArr) > 0:
-            Diff = min(newPosArr)
-            print(f'difference = {Diff}/pos= {self.pos}')
-
-        # This works, because a tile can only take up 3 spaces  (unless line) hmmmm
-        print(Diff-2)
-        # sets position to be 2 above the difference value
-        # Don't think this is a bug free solution, but will have to do for now :/
-        # Basically this doesnt take into account direction, so it puts any piece at the same height
-        # This is why it sometimes lags behind a bit when placing
-        if self.pieceType == 1: # this is the only one that can be taller than the others
-            if self.direction % 2 != 0:
-                self.pos = (self.pos[0], Diff-3)
-            else:
-                self.pos = (self.pos[0], Diff - 2)
+            hiPoint = min(newPosArr)
+            newLocy = hiPoint - 1
+            print(f'hipoint after checking highest Y: {hiPoint}')
+            print(f'Point above collision = {newLocy}/pos = {self.pos}')
         else:
-            self.pos = (self.pos[0], Diff-2)
+            newLocy = hiPoint - 1
+            print(f'hipoint after checking highest Y: {hiPoint}')
+            print('no collisions found')
+
+        NoCollision = False
+
+        self.pos = (self.pos[0], newLocy)
+        boardState = self.GetBoardState(self.type, self.pos)
+
+        # if oob
+        for item in boardState:
+            if item[1] > 23:
+                newLocy -= 1
+
+        # if colliding with anything in the map
+        self.pos = (self.pos[0], newLocy)   # setting to this so it can make the board
+        boardState = self.GetBoardState(self.type, self.pos)
+
+        # keeps doing it each piece, when it only needs to do it at each level of height
+        for item in boardState: # if item is already in the board, then this needs to add 1 to its y
+            print(item)
+            if item in board:
+                newLocy -= 1
+
+
+
+
+
+        # todo: i just need the lowest value under the 0,0 point
+        self.pos = (self.pos[0], newLocy)
+        self.boardState = self.GetBoardState(self.type, self.pos)
+        print(f'final pos = {self.pos}')
+        print(f'final segments = {self.boardState}')
+        print()
+        print(f'piece local coords = {self.type}')
+        print(f'direction = {self.direction}')
+        takenSpaces = []
+        for item in board:
+
+            if item[2] == 1:
+                takenSpaces.append(item)
+        print(f'taken spaces: {takenSpaces}')
+        print('setdown End')
         return True
 
 # Gets Places At the Location of a placed tetromino in the board (to be continuously Drawn
