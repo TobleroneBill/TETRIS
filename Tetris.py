@@ -147,8 +147,8 @@ class GameManager:
         self.GhostPieces.append(Ghost(self.activePiece.Color,positions))
         self.CheckLines()
         #Creates new piece Randomly
-        #self.activePiece = Piece(random.randint(1,7))
-        self.activePiece = Piece(5)
+        self.activePiece = Piece(random.randint(1,7))
+        #self.activePiece = Piece(5)
 
     # Every block placement, check for lines
     def CheckLines(self):
@@ -346,11 +346,13 @@ class Piece:
         if typenum == 5:    #J piece
             return ((1,1),(-1,0),(0,0),(1,0))
 
-
+        #todo:
         if typenum == 6:    #s piece
             return ((-1,0),(0,0),(0,1),(1,1))
         if typenum == 7:    #z piece
             return ((1,0),(0,0),(0,1),(-1,1))
+
+
         if typenum == 8:
             return ((0,0))
 
@@ -443,17 +445,24 @@ class Piece:
             else:
                 self.direction -= 1
 
+        if self.pieceType == 1:
+            # becasue it should only have 2 rotations, this is the jank
+            if self.direction == 3:
+                self.direction = 1
+            if self.direction == 4:
+                self.direction = 2
+
         coordArr = []
-        # Matrix = up to left = swap x/y and negate x,
-        # left to down = swap x/y,
-        # down to right = swap to x and negate,
-        # right to up = swap x/y
-        if Left:
+        # left rotate = (x=y,y=-x)
+        # right rotate = (x = -y,y=x)
+        if Left and not self.pieceType == 1:
             for coord in self.type:
                 coordArr.append(self.LeftRotate(coord))
-        else:
+        elif not self.pieceType == 1:
             for coord in self.type:
-                coordArr.append((self.RightRotate(coord)))
+                coordArr.append(self.RightRotate(coord))
+
+
         # gets the board positions of the rotated coordinates
         rotatedArr = self.GetBoardState(coordArr,self.pos)
         # Will return if True
@@ -465,6 +474,15 @@ class Piece:
                 self.direction += 1
             return
         self.type = coordArr
+
+        if self.pieceType == 1:
+            if self.direction == 1:
+                self.type = ((1, 1), (1, 0), (1, -1), (1, -2))
+            if self.direction == 2:
+                self.type = ((-1, 0), (0, 0), (1, 0), (2, 0))
+
+
+
         print(self.type[0])
 
     def RightRotate(self,coord):
@@ -493,8 +511,31 @@ class Piece:
     def SetDown(self,board):
         print()
         print('setdown start')
+        print(f'piecetype: {self.pieceType}')
         newPosArr = []
         hiPoint = 24   # board height
+        # l/j pieces
+        if self.pieceType == 4:
+            if self.direction == 4:
+                self.type = [(-1, 0), (0, 0), (0, 1), (0, 2)]
+        if self.pieceType == 5:
+            if self.direction == 2:
+                self.type = [(1, 0), (0, 0), (0, 1), (0, 2)]
+        # i piece
+        if self.pieceType == 1:
+            if self.direction == 4:
+                self.type = [(-1, 0), (0, 0), (1, 0), (2, 0)]
+
+        #s/z pieces
+        if self.pieceType == 6:
+            if self.direction % 2 != 0:
+                self.type = ((-1, 0), (0, 0), (0, 1), (1, 1))
+        if self.pieceType == 7:
+            if self.direction % 2 != 0:
+                self.type == ((1,0),(0,0),(0,1),(-1,1))
+        self.boardState = self.GetBoardState(self.type, self.pos)
+
+
 
         for y in range(self.pos[1],hiPoint):     # range of piece Y to the bottom Y
             for pos in self.boardState:     # each tetromino PIECE position
@@ -520,12 +561,6 @@ class Piece:
         # for the shitty pieces. Thier origins need to be moved, but this cant be done in the base instance,
         # because it ruins the rotation/ isn't true to original
         # I don't like this, but it's better than no solution
-        if self.pieceType == 4:
-            if self.direction == 4:
-                self.type = [(-1, 0), (0, 0), (0, 1), (0, 2)]
-        if self.pieceType == 5:
-            if self.direction == 2:
-                self.type = [(1, 0), (0, 0), (0, 1), (0, 2)]
 
         self.pos = (self.pos[0], newLocy)
         print(f'oldboardstate: {self.boardState}')
