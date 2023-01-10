@@ -147,8 +147,9 @@ class GameManager:
         self.GhostPieces.append(Ghost(self.activePiece.Color,positions))
         self.CheckLines()
         #Creates new piece Randomly
-        self.activePiece = Piece(random.randint(1,7))
-        #self.activePiece = Piece(4)
+        #self.activePiece = Piece(random.randint(1,7))
+        self.activePiece = Piece(5)
+
     # Every block placement, check for lines
     def CheckLines(self):
         lineNums = []
@@ -339,6 +340,7 @@ class Piece:
 
 
         if typenum == 4:    #L piece
+                                    #origin
             return ((-1,1),(-1,0),(0,0),(1,0))
 
         if typenum == 5:    #J piece
@@ -477,7 +479,6 @@ class Piece:
 
     # get lowest Y position
     def lowestY(self, ypos):
-        # defaults to the y position if no y given
         lowY = ypos
         for coord in self.boardState:
             if coord[1] < lowY:
@@ -515,27 +516,40 @@ class Piece:
             print(f'hipoint after checking highest Y: {hiPoint}')
             print('no collisions found')
 
-        NoCollision = False
+
+        # for the shitty pieces. Thier origins need to be moved, but this cant be done in the base instance,
+        # because it ruins the rotation/ isn't true to original
+        # I don't like this, but it's better than no solution
+        if self.pieceType == 4:
+            if self.direction == 4:
+                self.type = [(-1, 0), (0, 0), (0, 1), (0, 2)]
+        if self.pieceType == 5:
+            if self.direction == 2:
+                self.type = [(1, 0), (0, 0), (0, 1), (0, 2)]
 
         self.pos = (self.pos[0], newLocy)
+        print(f'oldboardstate: {self.boardState}')
         boardState = self.GetBoardState(self.type, self.pos)
+        print(f'new boardstate: {boardState}')
 
         # if oob
+        savedcoords = []
         for item in boardState:
-            if item[1] > 23:
+            if item[1] > 23 and item[1] not in savedcoords:
+                print('moving newlocy up')
                 newLocy -= 1
+                savedcoords.append(item[1])
 
-        # if colliding with anything in the map
-        self.pos = (self.pos[0], newLocy)   # setting to this so it can make the board
-        boardState = self.GetBoardState(self.type, self.pos)
-
+        savedcoords = []
         # keeps doing it each piece, when it only needs to do it at each level of height
         for item in boardState: # if item is already in the board, then this needs to add 1 to its y
             print(item)
-            if item in board:
+            if item in board and item[1] not in savedcoords:
+                # for the wierdly aligned pieces
+
+                print('moving newlocy up')
                 newLocy -= 1
-
-
+                savedcoords.append(item[1])
 
 
 
