@@ -1,6 +1,7 @@
 import pygame
 import sys
 import Tetris
+import os
 
 WIDTH,HEIGHT = 600,600
 SCREEN = pygame.display.set_mode((WIDTH,HEIGHT))
@@ -12,7 +13,6 @@ RESOLUTION = (WIDTH//24)    #scales with window size
 def main():
     pygame.init()
     GM = Tetris.GameManager(RESOLUTION,SCREEN)
-    print(GM.activePiece.type)
     while True:
         GM.Update()
         for event in pygame.event.get():

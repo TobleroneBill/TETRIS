@@ -10,6 +10,12 @@ BGIMG = pygame.image.load(assetDir[0])
 pygame.font.init()
 ScoreFont = pygame.font.SysFont('Arial',20)
 
+# Window settings
+pygame.display.set_caption('Tetris 19: ghosts')
+logo = pygame.image.load(assetDir[1])
+pygame.display.set_icon(logo)
+
+
 def Quit():
     pygame.quit()
     sys.exit()
@@ -23,7 +29,7 @@ def Quit():
 
 
 #   TODO: main features are added, so now you just need to clean up the source code currently, then move on to:
-#        V 1.1 - up next queue, score and level increase
+#        V 1.1 - up next queue
 #        V 1.2 - Main Menu, Sounds and perhaps some graphics ;)
 #        V 1.3 - Multiple Game Modes - single block mode, maybe a puzzle mode, marathon etc. (will think about this when i get to it)
 
@@ -33,8 +39,8 @@ class GameManager:
         self.boardColor = ((43, 43, 43))
         self.resolution = resolution
         self.screen = screen  # Pygame window
-        self.level = 6
-        self.line_clears = 9   # Indiviual lines, not 4 stacks. keeps track of lines needed to up the level (10)
+        self.level = 1
+        self.line_clears = 0   # Indiviual lines, not 4 stacks. keeps track of lines needed to up the level (10)
         self.total_line_clears = 0  # to keep track of total Lines
         self.timer = 120        # Depletes faster as Level increases
         self.GhostPieces = []    # Each piece object gets added to an array as a Ghost, so it can draw all on screen
@@ -45,6 +51,8 @@ class GameManager:
         #self.upnextArr = self.GETUPNEXT
         self.activePiece = Piece(4)
         self.AssetList = []
+        self.noOfKeys = 0
+        self.score = 0
 
     # Each coordinate holds a 1 or 0
     # If the line == 10, then it is a full line (see checklines method)
@@ -83,9 +91,13 @@ class GameManager:
         LCRect = lineClears.get_rect(y=0)
         LCRect.x = levelRect.x - LCRect.width - 20
 
+        score = ScoreFont.render(f'Score: {self.score}',False,TextColor)
+        scoreRect = score.get_rect(y=30)
+        scoreRect.x = self.screen.get_width() - 120
+
         self.screen.blit(level,levelRect)
         self.screen.blit(lineClears,LCRect)
-
+        self.screen.blit(score,scoreRect)
     # Makes the grid in pygame
     def DrawBoard(self):
         for item in self.board:
@@ -196,7 +208,7 @@ class GameManager:
         self.PAUSEGAME()
 
     def LineCount(self,lines):
-        lineLimit = 1
+        lineLimit = 5
         self.line_clears += lines    # Add line clears to
         self.total_line_clears += lines
         if self.line_clears >= lineLimit:
@@ -280,23 +292,45 @@ class GameManager:
     # Get left(a) and right(d) input and Rotation(left/right) Input
     # Gets input from pygame events in main loop
     def input(self,QueEvent):
+        self.noOfKeys = 0
         if QueEvent.type == pygame.KEYDOWN:
+
             # Rotations
-            if pygame.key.get_pressed()[pygame.K_LEFT]:
+            if pygame.key.get_pressed()[pygame.K_LEFT] and self.noOfKeys < 1:
                 self.activePiece.Rotate(self.board,Left=True)
-            if pygame.key.get_pressed()[pygame.K_RIGHT]:
+                self.noOfKeys += 1
+            if pygame.key.get_pressed()[pygame.K_RIGHT] and self.noOfKeys < 1:
                 self.activePiece.Rotate(self.board,Left=False)
-            # Movement
-            if pygame.key.get_pressed()[pygame.K_a]:#Left
-                self.activePiece.Move(self.board,Left=True)
-            if pygame.key.get_pressed()[pygame.K_d]:#Right
-                self.activePiece.Move(self.board,Left=False)
-            if pygame.key.get_pressed()[pygame.K_SPACE]:
+                self.noOfKeys += 1
+
+            # SetDown (insta-drop)
+            if pygame.key.get_pressed()[pygame.K_SPACE] and self.noOfKeys < 1:
                 # sets it to lowers possible position and then instantly places it
-                self.activePiece.SetDown(self.board)
+                self.score += self.activePiece.SetDown(self.board,self.level)
                 self.Place(self.activePiece.GetBoardState(self.activePiece.type,self.activePiece.pos))
 
+            # Movement
+            if pygame.key.get_pressed()[pygame.K_a] and self.noOfKeys < 2:#Left
+                self.activePiece.Move(self.board,Left=True)
+                self.noOfKeys += 1
+            if pygame.key.get_pressed()[pygame.K_d]and self.noOfKeys < 2:#Right
+                self.activePiece.Move(self.board,Left=False)
+                self.noOfKeys += 1
 
+
+            # FastDrop
+        if pygame.key.get_pressed()[pygame.K_s] and self.noOfKeys < 2:
+            self.FastDrop(Fast=True)
+            self.score += self.level
+        else:
+            self.FastDrop(Fast=False)
+
+
+    def FastDrop(self,Fast=False):
+        if Fast:
+            self.timer = 1
+        else:
+            self.timer = 120
 
 # Makes a piece based on the given type (chosen randomly) 1-7.
 # This piece can be moved and rotated
@@ -304,9 +338,8 @@ class GameManager:
 # Will place on cooridnates with y=0, or on top of another piece
 
 class Piece:
-    def __init__(self, typeNum, pos=(4,-3)):
-        #Color set to 100, so it doesnt go too low and cant be seen by player
-
+    def __init__(self, typeNum, pos=(4,1)):
+        # Color set to 100, so it doesnt go too low and cant be seen by player
         self.Color = (random.randint(100, 255), random.randint(100, 255), random.randint(100, 255))
         self.type = self.MakePiece(typeNum)  # 1 = i, 2 = o, 3 = T, 4 = S, 5 = Z, 6 = J, 7 = L
         self.pieceType = typeNum    # To be used to self differentiate what kind of piece it is
@@ -504,16 +537,14 @@ class Piece:
         print(f'{lowY} is lowest Y pos')
         return lowY
 
-    # get the location of the lowest active piece
+    # get the location of the lowest active piecessefsf
     # then check the positions around where your Piece would land
     # if no collisions, move to that position
     # todo: method for seeing lowest possible Y position
-    def SetDown(self,board):
-        print()
-        print('setdown start')
-        print(f'piecetype: {self.pieceType}')
+    def SetDown(self,board,levelMulti):
         newPosArr = []
         hiPoint = 24   # board height
+
         # l/j pieces
         if self.pieceType == 4:
             if self.direction == 4:
@@ -521,6 +552,7 @@ class Piece:
         if self.pieceType == 5:
             if self.direction == 2:
                 self.type = [(1, 0), (0, 0), (0, 1), (0, 2)]
+
         # i piece
         if self.pieceType == 1:
             if self.direction == 4:
@@ -532,7 +564,7 @@ class Piece:
                 self.type = ((-1, 0), (0, 0), (0, 1), (1, 1))
         if self.pieceType == 7:
             if self.direction % 2 != 0:
-                self.type == ((1,0),(0,0),(0,1),(-1,1))
+                self.type =  ((1,0),(0,0),(0,1),(-1,1))
         self.boardState = self.GetBoardState(self.type, self.pos)
 
 
@@ -544,28 +576,25 @@ class Piece:
                     newPosArr.append(y)     # at 1st match save position and quit
                     break
 
-        print(f'list of hi points: {newPosArr}')
+        # add distance * level to score
+        # todo
 
         # get the highest active piece
         if len(newPosArr) > 0:
             hiPoint = min(newPosArr)
             newLocy = hiPoint - 1
-            print(f'hipoint after checking highest Y: {hiPoint}')
-            print(f'Point above collision = {newLocy}/pos = {self.pos}')
         else:
             newLocy = hiPoint - 1
-            print(f'hipoint after checking highest Y: {hiPoint}')
-            print('no collisions found')
 
 
         # for the shitty pieces. Thier origins need to be moved, but this cant be done in the base instance,
         # because it ruins the rotation/ isn't true to original
         # I don't like this, but it's better than no solution
 
+        # Updates the board state + position, so that it caluclates from correct origin if its any of the
+        # odd type pieces
         self.pos = (self.pos[0], newLocy)
-        print(f'oldboardstate: {self.boardState}')
         boardState = self.GetBoardState(self.type, self.pos)
-        print(f'new boardstate: {boardState}')
 
         # if oob
         savedcoords = []
@@ -575,10 +604,10 @@ class Piece:
                 newLocy -= 1
                 savedcoords.append(item[1])
 
+        # collision check (some pieces need a corrected origin
         savedcoords = []
         # keeps doing it each piece, when it only needs to do it at each level of height
         for item in boardState: # if item is already in the board, then this needs to add 1 to its y
-            print(item)
             if item in board and item[1] not in savedcoords:
                 # for the wierdly aligned pieces
 
@@ -591,19 +620,7 @@ class Piece:
         # todo: i just need the lowest value under the 0,0 point
         self.pos = (self.pos[0], newLocy)
         self.boardState = self.GetBoardState(self.type, self.pos)
-        print(f'final pos = {self.pos}')
-        print(f'final segments = {self.boardState}')
-        print()
-        print(f'piece local coords = {self.type}')
-        print(f'direction = {self.direction}')
-        takenSpaces = []
-        for item in board:
-
-            if item[2] == 1:
-                takenSpaces.append(item)
-        print(f'taken spaces: {takenSpaces}')
-        print('setdown End')
-        return True
+        return newLocy * levelMulti
 
 # Gets Places At the Location of a placed tetromino in the board (to be continuously Drawn
 class Ghost:
