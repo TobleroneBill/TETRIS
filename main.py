@@ -14,13 +14,14 @@ def main():
     pygame.init()
     GM = Tetris.GameManager(RESOLUTION,SCREEN)
     while True:
-        GM.Update()
+        lastEvent = None
         for event in pygame.event.get():
+            lastEvent = event
             if event.type == pygame.QUIT or pygame.key.get_pressed()[pygame.K_ESCAPE]:
                 pygame.quit()
                 sys.exit()
             # Check user Input
-            GM.input(event)
+        GM.Update(lastEvent)
         pygame.display.flip()
         CLOCK.tick(FPS)
 
