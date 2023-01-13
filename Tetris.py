@@ -513,99 +513,19 @@ class Piece:
                 lowY = ypos
         return lowY
 
-    # get the location of the lowest active pieces
-    # then check the positions around where your Piece would land
-    # if no collisions, move to that position
-    # todo: method for seeing lowest possible Y position
+    # Just Checks directly underneath each unique X at its lowest Y position. If it finds a collision, it exits
+    # but if not, it keeps moving down until it collides or hits the bottom of the well
+    # this is very slow method IMO, but seems to work in pretty much every situation without throwing errors
     def SetDown(self, board, levelMulti):
-        '''
-                # l/j pieces
-                if self.pieceType == 4:
-                    if self.direction == 4:
-                        newPosArr = [(-1, 0), (0, 0), (0, 1), (0, 2)]
-                if self.pieceType == 5:
-                    if self.direction == 2:
-                        newPosArr = [(1, 0), (0, 0), (0, 1), (0, 2)]
-
-                # i piece
-                if self.pieceType == 1:
-                    if self.direction == 4:
-                        newPosArr = [(-1, 0), (0, 0), (1, 0), (2, 0)]
-
-                # s/z pieces
-                if self.pieceType == 6:
-                    if self.direction % 2 != 0:
-                        newPosArr = ((-1, 0), (0, 0), (0, 1), (1, 1))
-                if self.pieceType == 7:
-                    if self.direction % 2 != 0:
-                        newPosArr = ((1, 0), (0, 0), (0, 1), (-1, 1))
-        '''
         print('_____________________________SETDOWN START____________________________')
         print(f'Local Coords: {self.LocalCoords}')
         print(f'dir: {self.direction},type: {self.pieceType}')
 
-        newPosArr = []
-        hiPoint = 24  # board height
-        for y in range(self.pos[1], hiPoint):  # range of piece Y to the bottom Y
-            for pos in self.boardState:  # each tetromino PIECE position
-                # where the piece meets the highest placed tetromino (always 1st collision)
-                if (pos[0], y, 1) in board:
-                    newPosArr.append(y)  # at 1st match save position and quit
-                    break
-
-        # get the highest active piece
-        if len(newPosArr) > 0:
-            hiPoint = min(newPosArr)
-            # if hi point is above the x position, do nothing lol (this is pretty edge case)
-            if hiPoint < self.pos[0]:
-                return 0
-            newLocy = hiPoint - 1
-        else:
-            # set to bottom of the well
-            newLocy = hiPoint - 1
-
-        # you need to get the negative height, and sub it from newlocy, because i think
-        # the negative height is messing with placement
-
-        # you just need to check below the piece, and if all spaces are empty, then move down
-
-        print(f'hi Point: {hiPoint}')
-        print(f'Placement Y: {newLocy}')
-        print(f'oldPosition: {self.pos}')
-        # Updates the board state + position, so that it caluclates from correct origin if its any of the
-        # odd LocalCoords pieces
-        self.pos = (self.pos[0], newLocy)
-        boardState = self.GetBoardState(self.LocalCoords, self.pos)
-
-        print(f'New Location (no collision Check): {self.pos}')
-        print(f'oldPos:{self.boardState}\nnewPos: {boardState}')
-
-        # if oob
-        savedcoords = []
-        for item in boardState:
-            if item[1] > 23 and item[1] not in savedcoords:
-                newLocy -= 1
-                savedcoords.append(item[1])
-        print(savedcoords)
-
-        # collision check (some pieces need a corrected origin
-        savedcoords = []
-        # keeps doing it each piece, when it only needs to do it at each level of height
-        for item in boardState:  # if item is already in the board, then this needs to add 1 to its y
-            if item in board and item[1] not in savedcoords:
-                # for the wierdly aligned pieces
-                newLocy -= 1
-                savedcoords.append(item[1])
-
-        print(savedcoords)
-
-        # todo: i just need the lowest value under the 0,0 point
-        self.pos = (self.pos[0], newLocy)
-        self.boardState = self.GetBoardState(self.LocalCoords, self.pos)
-
+        distance = 0
         # adjusts positions to move down if there is available space in the Y
         collisions = False
         while not collisions:
+            distance += 1
             newPos = []
             for pos in self.boardState:
                 new = (pos[0], pos[1] + 1, 1)
@@ -630,7 +550,7 @@ class Piece:
 
 
         print(f'Final Calculated Position: {self.pos}\nFinal Segments: {self.boardState}')
-        return newLocy * levelMulti
+        return distance * levelMulti
 
 
 # Gets Places At the Location of a placed tetromino in the board (to be continuously Drawn
