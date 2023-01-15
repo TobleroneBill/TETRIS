@@ -11,6 +11,8 @@ This is my tetris Game engine that I have been working really hard on and have b
 
 No scoring yet as this is V1.0, but these are the features I'm planning to add and are also visible in the source code:
 
+# Currently at 1.1 but putting development on hold to do other stuff
+
 ### Coming Updates:
 - V 1.1 - up next queue, score and level increase
 - V 1.2 - Main Menu, Sounds and perhaps some graphics ;)
