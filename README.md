@@ -14,7 +14,6 @@ No scoring yet as this is V1.0, but these are the features I'm planning to add a
 # Currently at 1.1 but putting development on hold to do other stuff
 
 ### Coming Updates:
-- V 1.1 - up next queue, score and level increase
 - V 1.2 - Main Menu, Sounds and perhaps some graphics ;)
 - V 1.3 - Multiple Game Modes - single block mode, maybe a puzzle mode, marathon etc. (will think about this when i get to it)
 
