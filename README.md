@@ -1,6 +1,8 @@
 # TETRIS
 PyGame Tetris
 
+Itchio Link: https://billiams.itch.io/pytris
+
 This is my tetris Game engine that I have been working really hard on and have been trying to make ever since i started programming, so this is a massive milestone for me
 
 ### Controls
