@@ -2,6 +2,7 @@
 PyGame Tetris
 
 Itchio Link: https://billiams.itch.io/pytris
+Online Version: https://billiams.itch.io/pytris-online
 
 This is my tetris Game engine that I have been working really hard on and have been trying to make ever since i started programming, so this is a massive milestone for me
 
